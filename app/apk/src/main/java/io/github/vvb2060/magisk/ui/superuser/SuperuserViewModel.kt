@@ -1,10 +1,8 @@
 package io.github.vvb2060.magisk.ui.superuser
 
 import android.annotation.SuppressLint
-import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES
-import android.os.Process
 import androidx.databinding.Bindable
 import androidx.databinding.ObservableArrayList
 import androidx.lifecycle.viewModelScope
@@ -75,14 +73,13 @@ class SuperuserViewModel(
             val policyMap = db.fetchAll().associateBy { it.uid }
             val pm = AppContext.packageManager
 
-            // Get all third-party apps (use same method as DenyListViewModel)
-            val items = pm.getInstalledApplications(MATCH_UNINSTALLED_PACKAGES).asFlow()
-                .filter { it.packageName != AppContext.packageName }
-                .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || it.packageName == "com.android.shell" }
-                .mapNotNull { appInfo ->
+            // Get all third-party apps via root service
+            val packageNames = RootUtils.getInstalledPackages()
+            val items = packageNames.asFlow()
+                .filter { it != AppContext.packageName }
+                .mapNotNull { packageName ->
                     try {
-                        val packageName = appInfo.packageName
-                        val info: android.content.pm.PackageInfo = pm.getPackageInfo(packageName, MATCH_UNINSTALLED_PACKAGES)
+                        val info = pm.getPackageInfo(packageName, MATCH_UNINSTALLED_PACKAGES)
                         val applicationInfo = info.applicationInfo ?: return@mapNotNull null
 
                         // Get existing policy or create new one with QUERY status
