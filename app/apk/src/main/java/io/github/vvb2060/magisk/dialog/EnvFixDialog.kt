@@ -50,8 +50,7 @@ class EnvFixDialog(private val vm: HomeViewModel, private val code: Int) : Dialo
         }
 
         if (code == 2 || // No rules block, module policy not loaded
-            Info.env.versionCode != BuildConfig.APP_VERSION_CODE ||
-            Info.env.versionString != BuildConfig.APP_VERSION_NAME) {
+            Info.env.versionCode != BuildConfig.APP_VERSION_CODE) {
             dialog.setMessage(R.string.env_full_fix_msg)
             dialog.setButton(MagiskDialog.ButtonType.POSITIVE) {
                 text = android.R.string.ok

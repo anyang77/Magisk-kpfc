@@ -128,6 +128,19 @@ class SuperuserViewModel(
                     }
                 }.toCollection(ArrayList<PolicyRvItem>())
 
+            // Add shell (UID 2000) if it has a policy or should be shown
+            val shellUid = 2000
+            if (policyMap.containsKey(shellUid)) {
+                val shellPolicy = policyMap[shellUid]!!
+                policyItems.add(PolicyRvItem(
+                    this@SuperuserViewModel, shellPolicy,
+                    "shell",
+                    false,
+                    pm.defaultActivityIcon,
+                    "Shell"
+                ))
+            }
+
             // Sort: ALLOW apps first, DENY/QUERY apps after, then by app name
             policyItems.sortWith(compareBy(
                 { it.item.policy == SuPolicy.QUERY },  // QUERY last
@@ -189,17 +202,28 @@ class SuperuserViewModel(
     fun updatePolicy(item: PolicyRvItem, policy: Int) {
         fun updateState() {
             viewModelScope.launch {
-                if (policy >= SuPolicy.ALLOW) {
-                    // Grant: update or create policy
-                    item.item.policy = policy
-                    db.update(item.item)
-                    SnackbarEvent(R.string.su_snack_grant.asText(item.appName)).publish()
-                } else {
-                    // Deny: delete the policy completely
-                    db.delete(item.item.uid)
-                    SnackbarEvent(R.string.su_snack_deny.asText(item.appName)).publish()
+                try {
+                    withContext(Dispatchers.IO) {
+                        if (policy >= SuPolicy.ALLOW) {
+                            // Grant: update or create policy
+                            item.item.policy = policy
+                            db.update(item.item)
+                        } else {
+                            // Deny: delete the policy completely
+                            db.delete(item.item.uid)
+                        }
+                    }
+                    // Show snackbar on main thread
+                    val res = if (policy >= SuPolicy.ALLOW) {
+                        R.string.su_snack_grant.asText(item.appName)
+                    } else {
+                        R.string.su_snack_deny.asText(item.appName)
+                    }
+                    SnackbarEvent(res).publish()
                     // Reload to show updated list
                     doLoadWork()
+                } catch (e: Exception) {
+                    SnackbarEvent("Error: ${e.message}").publish()
                 }
             }
         }
