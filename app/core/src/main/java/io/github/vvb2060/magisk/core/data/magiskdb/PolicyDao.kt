@@ -34,9 +34,7 @@ class PolicyDao : MagiskDB() {
             }
         }
         val query = "INSERT OR REPLACE INTO ${Table.POLICY} ${map.toQuery()}"
-        android.util.Log.d("PolicyDao", "Updating policy: $query")
         exec(query)
-        android.util.Log.d("PolicyDao", "Policy updated successfully")
     }
 
     suspend fun fetchAll(): List<SuPolicy> {

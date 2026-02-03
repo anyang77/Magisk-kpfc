@@ -144,6 +144,7 @@ class SuperuserViewModel(
                     { it.packageName }
                 ))
                 itemsPolicies.set(policyItems)
+                itemsPolicies.filter { true }
             }
         } finally {
             loading = false
