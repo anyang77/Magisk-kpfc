@@ -70,88 +70,91 @@ class SuperuserViewModel(
             return
         }
 
-        loading = true
-        withContext(Dispatchers.IO) {
-            db.deleteOutdated()
-            db.delete(AppContext.applicationInfo.uid)
+        try {
+            loading = true
+            withContext(Dispatchers.IO) {
+                db.deleteOutdated()
+                db.delete(AppContext.applicationInfo.uid)
 
-            // Fetch all authorization records from database
-            val policyMap = db.fetchAll().associateBy { it.uid }
-            val pm = AppContext.packageManager
+                // Fetch all authorization records from database
+                val policyMap = db.fetchAll().associateBy { it.uid }
+                val pm = AppContext.packageManager
 
-            // Try to get package list via root service first (if available and rooted)
-            val packageNames = if (Info.isRooted) {
-                try {
-                    RootUtils.getInstalledPackages()
-                } catch (e: Exception) {
-                    // Fall back to standard method if root method fails
-                    null
-                }
-            } else null
-
-            // Get all third-party apps
-            val policyItems = if (packageNames != null) {
-                // Use root method result - convert package names to ApplicationInfo
-                packageNames.asFlow().mapNotNull { packageName ->
+                // Try to get package list via root service first (if available and rooted)
+                val packageNames = if (Info.isRooted) {
                     try {
-                        pm.getApplicationInfo(packageName, MATCH_UNINSTALLED_PACKAGES)
-                    } catch (e: PackageManager.NameNotFoundException) {
+                        RootUtils.getInstalledPackages()
+                    } catch (e: Exception) {
+                        // Fall back to standard method if root method fails
                         null
                     }
-                }
-            } else {
-                // Fall back to standard method
-                pm.getInstalledApplications(MATCH_UNINSTALLED_PACKAGES).asFlow()
-            }
-                .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
-                .mapNotNull { appInfo ->
-                    try {
-                        val packageName = appInfo.packageName
-                        val info: android.content.pm.PackageInfo = pm.getPackageInfo(packageName, MATCH_UNINSTALLED_PACKAGES)
-                        val applicationInfo = info.applicationInfo ?: return@mapNotNull null
+                } else null
 
-                        // Get existing policy or create new one with QUERY status
-                        val policy = policyMap[applicationInfo.uid] ?: SuPolicy(
-                            uid = applicationInfo.uid,
-                            policy = SuPolicy.QUERY
-                        )
-
-                        PolicyRvItem(
-                            this@SuperuserViewModel, policy,
-                            info.packageName,
-                            info.sharedUserId != null,
-                            applicationInfo.loadIcon(pm),
-                            applicationInfo.getLabel(pm) ?: packageName
-                        )
-                    } catch (e: PackageManager.NameNotFoundException) {
-                        null
+                // Get all third-party apps
+                val policyItems = if (packageNames != null) {
+                    // Use root method result - convert package names to ApplicationInfo
+                    packageNames.asFlow().mapNotNull { packageName ->
+                        try {
+                            pm.getApplicationInfo(packageName, MATCH_UNINSTALLED_PACKAGES)
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            null
+                        }
                     }
-                }.toCollection(ArrayList<PolicyRvItem>())
+                } else {
+                    // Fall back to standard method
+                    pm.getInstalledApplications(MATCH_UNINSTALLED_PACKAGES).asFlow()
+                }
+                    .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
+                    .mapNotNull { appInfo ->
+                        try {
+                            val packageName = appInfo.packageName
+                            val info: android.content.pm.PackageInfo = pm.getPackageInfo(packageName, MATCH_UNINSTALLED_PACKAGES)
+                            val applicationInfo = info.applicationInfo ?: return@mapNotNull null
 
-            // Add shell (UID 2000) if it has a policy or should be shown
-            val shellUid = 2000
-            if (policyMap.containsKey(shellUid)) {
-                val shellPolicy = policyMap[shellUid]!!
-                policyItems.add(PolicyRvItem(
-                    this@SuperuserViewModel, shellPolicy,
-                    "shell",
-                    false,
-                    pm.defaultActivityIcon,
-                    "Shell"
+                            // Get existing policy or create new one with QUERY status
+                            val policy = policyMap[applicationInfo.uid] ?: SuPolicy(
+                                uid = applicationInfo.uid,
+                                policy = SuPolicy.QUERY
+                            )
+
+                            PolicyRvItem(
+                                this@SuperuserViewModel, policy,
+                                info.packageName,
+                                info.sharedUserId != null,
+                                applicationInfo.loadIcon(pm),
+                                applicationInfo.getLabel(pm) ?: packageName
+                            )
+                        } catch (e: PackageManager.NameNotFoundException) {
+                            null
+                        }
+                    }.toCollection(ArrayList<PolicyRvItem>())
+
+                // Add shell (UID 2000) if it has a policy or should be shown
+                val shellUid = 2000
+                if (policyMap.containsKey(shellUid)) {
+                    val shellPolicy = policyMap[shellUid]!!
+                    policyItems.add(PolicyRvItem(
+                        this@SuperuserViewModel, shellPolicy,
+                        "shell",
+                        false,
+                        pm.defaultActivityIcon,
+                        "Shell"
+                    ))
+                }
+
+                // Sort: ALLOW apps first, DENY/QUERY apps after, then by app name
+                policyItems.sortWith(compareBy(
+                    { it.item.policy == SuPolicy.QUERY },  // QUERY last
+                    { it.item.policy != SuPolicy.ALLOW },  // ALLOW first
+                    { it.appName.lowercase(Locale.ROOT) },
+                    { it.packageName }
                 ))
+                itemsPolicies.set(policyItems)
             }
-
-            // Sort: ALLOW apps first, DENY/QUERY apps after, then by app name
-            policyItems.sortWith(compareBy(
-                { it.item.policy == SuPolicy.QUERY },  // QUERY last
-                { it.item.policy != SuPolicy.ALLOW },  // ALLOW first
-                { it.appName.lowercase(Locale.ROOT) },
-                { it.packageName }
-            ))
-            itemsPolicies.set(policyItems)
+            doQuery(query)
+        } finally {
+            loading = false
         }
-        doQuery(query)
-        loading = false
     }
 
     private fun doQuery(s: String) {
@@ -205,8 +208,14 @@ class SuperuserViewModel(
                 try {
                     withContext(Dispatchers.IO) {
                         if (policy >= SuPolicy.ALLOW) {
-                            // Grant: update or create policy
-                            item.item.policy = policy
+                            // Grant: same logic as SuRequestHandler.respond()
+                            if (policy == SuPolicy.ALLOW && Config.suRestrict) {
+                                item.item.policy = SuPolicy.RESTRICT
+                            } else {
+                                item.item.policy = policy
+                            }
+                            // Set remain to -1 (forever) for manual grants
+                            item.item.remain = -1L
                             db.update(item.item)
                         } else {
                             // Deny: delete the policy completely
@@ -224,6 +233,7 @@ class SuperuserViewModel(
                     doLoadWork()
                 } catch (e: Exception) {
                     SnackbarEvent("Error: ${e.message}").publish()
+                    e.printStackTrace()
                 }
             }
         }

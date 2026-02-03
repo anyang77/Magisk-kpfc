@@ -35,6 +35,12 @@ class PolicyDao : MagiskDB() {
         }
         val query = "INSERT OR REPLACE INTO ${Table.POLICY} ${map.toQuery()}"
         exec(query)
+
+        // Verify the update was successful by fetching the policy back
+        val updated = fetch(policy.uid)
+        if (updated == null || updated.policy != policy.policy) {
+            throw IllegalStateException("Failed to update policy for UID ${policy.uid}. DB has ${updated?.policy}, expected ${policy.policy}")
+        }
     }
 
     suspend fun fetchAll(): List<SuPolicy> {
