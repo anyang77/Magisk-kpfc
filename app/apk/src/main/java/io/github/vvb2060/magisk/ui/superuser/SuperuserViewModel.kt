@@ -124,18 +124,19 @@ class SuperuserViewModel(
                     }
                 }.toCollection(ArrayList<PolicyRvItem>())
 
-            // Add shell (UID 2000) if it has a policy or should be shown
+            // Add shell (UID 2000) - always show
             val shellUid = 2000
-            if (policyMap.containsKey(shellUid)) {
-                val shellPolicy = policyMap[shellUid]!!
-                items.add(PolicyRvItem(
-                    this@SuperuserViewModel, shellPolicy,
-                    "shell",
-                    false,
-                    pm.defaultActivityIcon,
-                    "Shell"
-                ))
-            }
+            val shellPolicy = policyMap[shellUid] ?: SuPolicy(
+                uid = shellUid,
+                policy = SuPolicy.QUERY
+            )
+            items.add(PolicyRvItem(
+                this@SuperuserViewModel, shellPolicy,
+                "shell",
+                false,
+                pm.defaultActivityIcon,
+                "Shell"
+            ))
 
             // Sort: ALLOW apps first, DENY/QUERY apps after, then by app name
             items.sortWith(compareBy(

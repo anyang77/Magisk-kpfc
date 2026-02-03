@@ -18,7 +18,7 @@ class SuPolicy(
 
     fun toMap(): MutableMap<String, Any> {
         val until = if (remain <= 0) {
-            remain
+            0  // 永久授权使用 0，-1 会被 deleteOutdated() 删除
         } else {
             MagiskDB.Literal("(strftime(\"%s\", \"now\") + $remain)")
         }
