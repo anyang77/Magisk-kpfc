@@ -58,12 +58,6 @@ class SuperuserViewModel(
     var loading = false
         private set(value) = set(value, field, { field = it }, BR.loading)
 
-    @get:Bindable
-    var query = ""
-        set(value) = set(value, field, { field = it }, BR.query) {
-            doQuery(value)
-        }
-
     @SuppressLint("InlinedApi")
     override suspend fun doLoadWork() {
         if (!Info.showSuperUser) {
@@ -151,17 +145,8 @@ class SuperuserViewModel(
                 ))
                 itemsPolicies.set(policyItems)
             }
-            doQuery(query)
         } finally {
             loading = false
-        }
-    }
-
-    private fun doQuery(s: String) {
-        itemsPolicies.filter {
-            fun inName() = it.appName.contains(s, ignoreCase = true)
-            fun inPackage() = it.packageName.contains(s, ignoreCase = true)
-            inName() || inPackage()
         }
     }
 
@@ -182,7 +167,9 @@ class SuperuserViewModel(
 
     fun updateNotify(item: PolicyRvItem) {
         viewModelScope.launch {
-            db.update(item.item)
+            withContext(Dispatchers.IO) {
+                db.update(item.item)
+            }
             val res = when {
                 item.item.notification -> R.string.su_snack_notif_on
                 else -> R.string.su_snack_notif_off
@@ -193,7 +180,9 @@ class SuperuserViewModel(
 
     fun updateLogging(item: PolicyRvItem) {
         viewModelScope.launch {
-            db.update(item.item)
+            withContext(Dispatchers.IO) {
+                db.update(item.item)
+            }
             val res = when {
                 item.item.logging -> R.string.su_snack_log_on
                 else -> R.string.su_snack_log_off
@@ -208,14 +197,8 @@ class SuperuserViewModel(
                 try {
                     withContext(Dispatchers.IO) {
                         if (policy >= SuPolicy.ALLOW) {
-                            // Grant: same logic as SuRequestHandler.respond()
-                            if (policy == SuPolicy.ALLOW && Config.suRestrict) {
-                                item.item.policy = SuPolicy.RESTRICT
-                            } else {
-                                item.item.policy = policy
-                            }
-                            // Set remain to -1 (forever) for manual grants
-                            item.item.remain = -1L
+                            // Grant: update or create policy
+                            item.item.policy = policy
                             db.update(item.item)
                         } else {
                             // Deny: delete the policy completely
@@ -233,7 +216,6 @@ class SuperuserViewModel(
                     doLoadWork()
                 } catch (e: Exception) {
                     SnackbarEvent("Error: ${e.message}").publish()
-                    e.printStackTrace()
                 }
             }
         }

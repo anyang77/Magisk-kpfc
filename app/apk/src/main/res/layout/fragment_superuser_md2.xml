@@ -20,23 +20,6 @@
             android:layout_height="match_parent"
             android:orientation="vertical">
 
-            <!-- Search Box -->
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/search_layout"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_margin="@dimen/l1"
-                android:hint="@string/hide_filter_hint"
-                app:boxBackgroundMode="outline">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/search_input"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="@={viewModel.query}"
-                    android:inputType="text" />
-            </com.google.android.material.textfield.TextInputLayout>
-
             <!-- RecyclerView -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/superuser_list"

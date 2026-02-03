@@ -24,10 +24,6 @@ class SuperuserFragment : BaseFragment<FragmentSuperuserMd2Binding>() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Reference search views to prevent resource shrinking from removing them
-        binding.searchLayout
-        binding.searchInput
-
         binding.superuserList.apply {
             addEdgeSpacing(top = R.dimen.l_50, bottom = R.dimen.l1)
             addItemSpacing(R.dimen.l1, R.dimen.l_50, R.dimen.l1)
