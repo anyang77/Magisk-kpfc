@@ -19,7 +19,7 @@ import io.github.vvb2060.magisk.core.model.su.SuPolicy
 import io.github.vvb2060.magisk.databinding.MergeObservableList
 import io.github.vvb2060.magisk.databinding.RvItem
 import io.github.vvb2060.magisk.databinding.bindExtra
-import io.github.vvb2060.magisk.databinding.filterList
+import io.github.vvb2060.magisk.databinding.diffList
 import io.github.vvb2060.magisk.databinding.set
 import io.github.vvb2060.magisk.dialog.SuperuserRevokeDialog
 import io.github.vvb2060.magisk.events.AuthEvent
@@ -42,7 +42,7 @@ class SuperuserViewModel(
     private val itemNoData = TextItem(R.string.superuser_policy_none)
 
     private val itemsHelpers = ObservableArrayList<TextItem>()
-    private val itemsPolicies = filterList<PolicyRvItem>(viewModelScope)
+    private val itemsPolicies = diffList<PolicyRvItem>()
 
     val items = MergeObservableList<RvItem>()
         .insertList(itemsHelpers)
@@ -128,8 +128,7 @@ class SuperuserViewModel(
         }
 
         // Update list on main thread
-        itemsPolicies.set(policyItems)
-        itemsPolicies.filter { true }
+        itemsPolicies.update(policyItems)
         loading = false
     }
 

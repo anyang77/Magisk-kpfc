@@ -15,30 +15,21 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent">
 
-        <LinearLayout
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/superuser_list"
+            gone="@{viewModel.loading}"
+            app:items="@{viewModel.items}"
+            app:extraBindings="@{viewModel.extraBindings}"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:clipToPadding="false"
+            android:orientation="vertical"
+            android:paddingTop="@dimen/internal_action_bar_size"
+            android:paddingBottom="56dp"
+            app:fitsSystemWindowsInsets="top|bottom"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/item_policy_md2" />
 
-            <!-- RecyclerView -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/superuser_list"
-                gone="@{viewModel.loading}"
-                app:items="@{viewModel.items}"
-                app:extraBindings="@{viewModel.extraBindings}"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:clipToPadding="false"
-                android:orientation="vertical"
-                android:paddingTop="8dp"
-                android:paddingBottom="56dp"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:listitem="@layout/item_policy_md2" />
-
-        </LinearLayout>
-
-        <!-- Loading indicator -->
         <LinearLayout
             goneUnless="@{viewModel.loading}"
             android:layout_width="match_parent"
