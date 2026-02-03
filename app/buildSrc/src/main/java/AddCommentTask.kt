@@ -43,7 +43,7 @@ abstract class AddCommentTask: DefaultTask() {
         val signingOptions = SigningOptions.builder()
             .setMinSdkVersion(0)
             .setV1SigningEnabled(true)
-            .setV2SigningEnabled(false) // Disable V2 to avoid varying timestamps
+            .setV2SigningEnabled(true)
             .setKey(privateKey.privateKey)
             .setCertificates(privateKey.certificate as X509Certificate)
             .setValidation(SigningOptions.Validation.ASSUME_INVALID)
