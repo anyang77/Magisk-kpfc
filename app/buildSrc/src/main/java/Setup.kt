@@ -141,7 +141,7 @@ fun Project.setupCoreLib() {
                     // Copy other binaries from prebuilt only (required)
                     from(prebuiltDir) {
                         include("libmagisk.so", "libmagiskboot.so", "libmagiskpolicy.so", "libinit-ld.so",
-                            "magisk", "magiskboot", "magiskpolicy", "libinit-ld.so")
+                            "magisk", "magiskboot", "magiskpolicy", "init-ld")
                         rename { if (it.endsWith(".so")) it else "lib$it.so" }
                     }
 
