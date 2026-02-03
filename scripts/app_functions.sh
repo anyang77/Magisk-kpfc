@@ -20,8 +20,8 @@ env_check() {
   if [ "$2" -ge 25210 ]; then
     [ -b "$MAGISKTMP/.magisk/device/preinit" ] || [ -b "$MAGISKTMP/.magisk/block/preinit" ] || return 2
   fi
-  grep -xqF "MAGISK_VER='$1'" "$MAGISKBIN/util_functions.sh" || return 3
-  grep -xqF "MAGISK_VER_CODE=$2" "$MAGISKBIN/util_functions.sh" || return 3
+  # Skip version string check to support prebuilt binaries with different versions
+  # Only check version code (30600) in Java (EnvFixDialog.kt)
   return 0
 }
 
