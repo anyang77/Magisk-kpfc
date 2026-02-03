@@ -75,31 +75,10 @@ class SuperuserViewModel(
             val policyMap = db.fetchAll().associateBy { it.uid }
             val pm = AppContext.packageManager
 
-            // Try to get package list via root service first (if available and rooted)
-            val packageNames = if (Info.isRooted) {
-                try {
-                    RootUtils.getInstalledPackages()
-                } catch (e: Exception) {
-                    // Fall back to standard method if root method fails
-                    null
-                }
-            } else null
-
-            // Get all third-party apps
-            val items = if (packageNames != null) {
-                // Use root method result - convert package names to ApplicationInfo
-                packageNames.asFlow().mapNotNull { packageName ->
-                    try {
-                        pm.getApplicationInfo(packageName, MATCH_UNINSTALLED_PACKAGES)
-                    } catch (e: PackageManager.NameNotFoundException) {
-                        null
-                    }
-                }
-            } else {
-                // Fall back to standard method
-                pm.getInstalledApplications(MATCH_UNINSTALLED_PACKAGES).asFlow()
-            }
-                .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 }
+            // Get all third-party apps (use same method as DenyListViewModel)
+            val items = pm.getInstalledApplications(MATCH_UNINSTALLED_PACKAGES).asFlow()
+                .filter { it.packageName != AppContext.packageName }
+                .filter { (it.flags and ApplicationInfo.FLAG_SYSTEM) == 0 || it.packageName == "com.android.shell" }
                 .mapNotNull { appInfo ->
                     try {
                         val packageName = appInfo.packageName
@@ -124,19 +103,21 @@ class SuperuserViewModel(
                     }
                 }.toCollection(ArrayList<PolicyRvItem>())
 
-            // Add shell (UID 2000) - always show
+            // Add shell (UID 2000) if not already in list
             val shellUid = 2000
-            val shellPolicy = policyMap[shellUid] ?: SuPolicy(
-                uid = shellUid,
-                policy = SuPolicy.QUERY
-            )
-            items.add(PolicyRvItem(
-                this@SuperuserViewModel, shellPolicy,
-                "shell",
-                false,
-                pm.defaultActivityIcon,
-                "Shell"
-            ))
+            if (items.none { it.item.uid == shellUid }) {
+                val shellPolicy = policyMap[shellUid] ?: SuPolicy(
+                    uid = shellUid,
+                    policy = SuPolicy.QUERY
+                )
+                items.add(PolicyRvItem(
+                    this@SuperuserViewModel, shellPolicy,
+                    "com.android.shell",
+                    false,
+                    pm.defaultActivityIcon,
+                    "Shell"
+                ))
+            }
 
             // Sort: ALLOW apps first, DENY/QUERY apps after, then by app name
             items.sortWith(compareBy(
