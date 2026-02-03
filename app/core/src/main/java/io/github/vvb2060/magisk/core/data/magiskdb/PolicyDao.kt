@@ -28,9 +28,9 @@ class PolicyDao : MagiskDB() {
         val map = policy.toMap()
         if (!Const.Version.atLeast_25_0()) {
             // Put in package_name for old database
-            val packages = AppContext.packageManager.getPackagesForUid(policy.uid, 0)
-            if (packages.isNotEmpty()) {
-                map["package_name"] = packages[0].packageName
+            val packages = AppContext.packageManager.getPackagesForUid(policy.uid)
+            if (packages != null && packages.isNotEmpty()) {
+                map["package_name"] = packages[0]
             }
         }
         val query = "INSERT OR REPLACE INTO ${Table.POLICY} ${map.toQuery()}"
